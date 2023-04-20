@@ -319,6 +319,7 @@
     ]
   },
   "scripts": {
+    "postinstall": "husky install",
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./"
@@ -326,7 +327,13 @@
   "devDependencies": {
     "@types/node": "^16.11.7",
     "@types/vscode": "^1.1.59",
+    "husky": "^8.0.3",
+    "lint-staged": "^13.2.1",
+    "prettier": "^2.8.7",
     "typescript": "^4.4.4"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "prettier": {
+    "printWidth": 80
+  }
 }
