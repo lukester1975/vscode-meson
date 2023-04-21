@@ -1,13 +1,29 @@
 import * as vscode from "vscode";
-import { getMesonTargets, getMesonTests, getMesonBenchmarks } from "./introspection";
-import { extensionConfiguration, getOutputChannel, getTargetName, getEnvDict } from "./utils";
+import {
+  getMesonTargets,
+  getMesonTests,
+  getMesonBenchmarks,
+} from "./introspection";
+import {
+  extensionConfiguration,
+  getOutputChannel,
+  getTargetName,
+  getEnvDict,
+} from "./utils";
 import { Test, Target } from "./types";
 import { checkMesonIsConfigured } from "./utils";
 
 interface MesonTaskDefinition extends vscode.TaskDefinition {
   type: "meson";
   target?: string;
-  mode?: "build" | "run" | "test" | "benchmark" | "clean" | "reconfigure" | "install";
+  mode?:
+    | "build"
+    | "run"
+    | "test"
+    | "benchmark"
+    | "clean"
+    | "reconfigure"
+    | "install";
   filename?: string;
 }
 
@@ -55,8 +71,16 @@ function createRunTask(t: Target, targetName: string) {
 function createReconfigureTask(buildDir: string) {
   const configureOpts = extensionConfiguration("configureOptions");
   const setupOpts = extensionConfiguration("setupOptions");
-  const reconfigureOpts = checkMesonIsConfigured(buildDir) ? ["--reconfigure"] : [];
-  const args = ["setup", ...reconfigureOpts, ...configureOpts, ...setupOpts, buildDir];
+  const reconfigureOpts = checkMesonIsConfigured(buildDir)
+    ? ["--reconfigure"]
+    : [];
+  const args = [
+    "setup",
+    ...reconfigureOpts,
+    ...configureOpts,
+    ...setupOpts,
+    buildDir,
+  ];
   return new vscode.Task(
     { type: "meson", mode: "reconfigure" },
     "Reconfigure",
@@ -74,14 +98,22 @@ export async function getMesonTasks(buildDir: string): Promise<vscode.Task[]> {
       { type: "meson", mode: "build" },
       "Build all targets",
       "Meson",
-      new vscode.ProcessExecution(extensionConfiguration("mesonPath"), ["compile", "-C", buildDir]),
+      new vscode.ProcessExecution(extensionConfiguration("mesonPath"), [
+        "compile",
+        "-C",
+        buildDir,
+      ]),
       "$meson-gcc"
     );
     const defaultTestTask = new vscode.Task(
       { type: "meson", mode: "test" },
       "Run all tests",
       "Meson",
-      new vscode.ProcessExecution(extensionConfiguration("mesonPath"), ["test"], { cwd: buildDir })
+      new vscode.ProcessExecution(
+        extensionConfiguration("mesonPath"),
+        ["test"],
+        { cwd: buildDir }
+      )
     );
     const defaultBenchmarkTask = new vscode.Task(
       { type: "meson", mode: "benchmark" },
@@ -98,17 +130,25 @@ export async function getMesonTasks(buildDir: string): Promise<vscode.Task[]> {
       { type: "meson", mode: "install" },
       "Run install",
       "Meson",
-      new vscode.ProcessExecution(extensionConfiguration("mesonPath"), ["install"], {
-        cwd: buildDir,
-      })
+      new vscode.ProcessExecution(
+        extensionConfiguration("mesonPath"),
+        ["install"],
+        {
+          cwd: buildDir,
+        }
+      )
     );
     const defaultCleanTask = new vscode.Task(
       { type: "meson", mode: "clean" },
       "Clean",
       "Meson",
-      new vscode.ProcessExecution(extensionConfiguration("mesonPath"), ["compile", "--clean"], {
-        cwd: buildDir,
-      })
+      new vscode.ProcessExecution(
+        extensionConfiguration("mesonPath"),
+        ["compile", "--clean"],
+        {
+          cwd: buildDir,
+        }
+      )
     );
     defaultBuildTask.group = vscode.TaskGroup.Build;
     defaultTestTask.group = vscode.TaskGroup.Test;
@@ -186,7 +226,8 @@ export async function getTask(mode: string, name?: string) {
   const filtered = tasks.filter(
     (t) => t.definition.mode === mode && (!name || t.definition.target === name)
   );
-  if (filtered.length === 0) throw new Error(`Cannot find ${mode} target ${name}.`);
+  if (filtered.length === 0)
+    throw new Error(`Cannot find ${mode} target ${name}.`);
   return filtered[0];
 }
 
@@ -199,7 +240,9 @@ export async function runTask(task: vscode.Task) {
   try {
     await vscode.tasks.executeTask(task);
   } catch (e) {
-    vscode.window.showErrorMessage(`Could not ${task.definition.mode} ${task.name}`);
+    vscode.window.showErrorMessage(
+      `Could not ${task.definition.mode} ${task.name}`
+    );
     getOutputChannel().appendLine(`Running task ${task.name}:`);
     getOutputChannel().appendLine(e);
     getOutputChannel().show(true);
