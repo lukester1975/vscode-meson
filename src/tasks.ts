@@ -1,9 +1,5 @@
 import * as vscode from "vscode";
-import {
-  getMesonTargets,
-  getMesonTests,
-  getMesonBenchmarks
-} from "./introspection";
+import { getMesonTargets, getMesonTests, getMesonBenchmarks } from "./introspection";
 import { extensionConfiguration, getOutputChannel, getTargetName, getEnvDict } from "./utils";
 import { Test, Target } from "./types";
 import { checkMesonIsConfigured } from "./utils";
@@ -16,9 +12,9 @@ interface MesonTaskDefinition extends vscode.TaskDefinition {
 }
 
 function createTestTask(t: Test, buildDir: string, isBenchmark: boolean) {
-  const project = t.suite[0].split(":")[0]
+  const project = t.suite[0].split(":")[0];
   const name = `${project}:${t.name}`;
-  const mode = isBenchmark ? "benchmark" : 'test'
+  const mode = isBenchmark ? "benchmark" : "test";
   const benchmarkArgs = isBenchmark ? ["--benchmark", "--verbose"] : [];
   const args = ["test", ...benchmarkArgs].concat(name);
   const testTask = new vscode.Task(
@@ -26,11 +22,13 @@ function createTestTask(t: Test, buildDir: string, isBenchmark: boolean) {
     `Test ${name}`,
     "Meson",
     new vscode.ProcessExecution(extensionConfiguration("mesonPath"), args, {
-      cwd: buildDir
+      cwd: buildDir,
     })
   );
   testTask.group = vscode.TaskGroup.Test;
-  testTask.detail = `Timeout: ${t.timeout}s, ${!isBenchmark && t.is_parallel ? "run in parallel" : "run serially"}`
+  testTask.detail = `Timeout: ${t.timeout}s, ${
+    !isBenchmark && t.is_parallel ? "run in parallel" : "run serially"
+  }`;
   return testTask;
 }
 
@@ -41,7 +39,7 @@ function createRunTask(t: Target, targetName: string) {
       type: "meson",
       target: targetName,
       filename: t.filename[0],
-      mode: "run"
+      mode: "run",
     },
     `Run ${targetDisplayName}`,
     "Meson",
@@ -57,15 +55,16 @@ function createRunTask(t: Target, targetName: string) {
 function createReconfigureTask(buildDir: string) {
   const configureOpts = extensionConfiguration("configureOptions");
   const setupOpts = extensionConfiguration("setupOptions");
-  const reconfigureOpts = checkMesonIsConfigured(buildDir) ? ["--reconfigure"] : []
-  const args = ["setup", ...reconfigureOpts, ...configureOpts, ...setupOpts, buildDir]
+  const reconfigureOpts = checkMesonIsConfigured(buildDir) ? ["--reconfigure"] : [];
+  const args = ["setup", ...reconfigureOpts, ...configureOpts, ...setupOpts, buildDir];
   return new vscode.Task(
     { type: "meson", mode: "reconfigure" },
     "Reconfigure",
     "Meson",
     // Note "setup --reconfigure" needs to be run from the root.
-    new vscode.ProcessExecution(extensionConfiguration("mesonPath"), args,
-      { cwd: vscode.workspace.rootPath })
+    new vscode.ProcessExecution(extensionConfiguration("mesonPath"), args, {
+      cwd: vscode.workspace.rootPath,
+    })
   );
 }
 
@@ -88,20 +87,28 @@ export async function getMesonTasks(buildDir: string): Promise<vscode.Task[]> {
       { type: "meson", mode: "benchmark" },
       "Run all benchmarks",
       "Meson",
-      new vscode.ProcessExecution(extensionConfiguration("mesonPath"), ["test", "--benchmark", "--verbose"], { cwd: buildDir })
+      new vscode.ProcessExecution(
+        extensionConfiguration("mesonPath"),
+        ["test", "--benchmark", "--verbose"],
+        { cwd: buildDir }
+      )
     );
     const defaultReconfigureTask = createReconfigureTask(buildDir);
     const defaultInstallTask = new vscode.Task(
       { type: "meson", mode: "install" },
       "Run install",
       "Meson",
-      new vscode.ProcessExecution(extensionConfiguration("mesonPath"), ["install"], { cwd: buildDir })
+      new vscode.ProcessExecution(extensionConfiguration("mesonPath"), ["install"], {
+        cwd: buildDir,
+      })
     );
     const defaultCleanTask = new vscode.Task(
       { type: "meson", mode: "clean" },
       "Clean",
       "Meson",
-      new vscode.ProcessExecution(extensionConfiguration("mesonPath"), ["compile", "--clean"], { cwd: buildDir })
+      new vscode.ProcessExecution(extensionConfiguration("mesonPath"), ["compile", "--clean"], {
+        cwd: buildDir,
+      })
     );
     defaultBuildTask.group = vscode.TaskGroup.Build;
     defaultTestTask.group = vscode.TaskGroup.Test;
@@ -114,48 +121,53 @@ export async function getMesonTasks(buildDir: string): Promise<vscode.Task[]> {
       defaultBenchmarkTask,
       defaultReconfigureTask,
       defaultCleanTask,
-      defaultInstallTask
+      defaultInstallTask,
     ];
 
     // Remaining tasks needs a valid configuration
-    if (!checkMesonIsConfigured(buildDir))
-      return tasks;
+    if (!checkMesonIsConfigured(buildDir)) return tasks;
 
     const [targets, tests, benchmarks] = await Promise.all([
       getMesonTargets(buildDir),
       getMesonTests(buildDir),
-      getMesonBenchmarks(buildDir)
+      getMesonBenchmarks(buildDir),
     ]);
 
     tasks.push(
-      ...(await Promise.all(
-        targets.map(async t => {
-          const targetName = await getTargetName(t);
-          const def: MesonTaskDefinition = {
-            type: "meson",
-            target: targetName,
-            mode: "build"
-          };
-          const buildTask = new vscode.Task(
-            def,
-            `Build ${targetName}`,
-            "Meson",
-            new vscode.ProcessExecution(extensionConfiguration("mesonPath"), ["compile", targetName], {
-              cwd: buildDir
-            }),
-            "$meson-gcc"
-          );
-          buildTask.group = vscode.TaskGroup.Build;
-          // FIXME: We should only include executable installed in bindir,
-          // but install_dir is missing from intro data.
-          if (t.type == "executable" && t.installed) {
-            return [buildTask, createRunTask(t, targetName)];
-          }
-          return buildTask;
-        })
-      )).flat(1),
-      ...tests.map(t => createTestTask(t, buildDir, false)),
-      ...benchmarks.map(b => createTestTask(b, buildDir, true))
+      ...(
+        await Promise.all(
+          targets.map(async (t) => {
+            const targetName = await getTargetName(t);
+            const def: MesonTaskDefinition = {
+              type: "meson",
+              target: targetName,
+              mode: "build",
+            };
+            const buildTask = new vscode.Task(
+              def,
+              `Build ${targetName}`,
+              "Meson",
+              new vscode.ProcessExecution(
+                extensionConfiguration("mesonPath"),
+                ["compile", targetName],
+                {
+                  cwd: buildDir,
+                }
+              ),
+              "$meson-gcc"
+            );
+            buildTask.group = vscode.TaskGroup.Build;
+            // FIXME: We should only include executable installed in bindir,
+            // but install_dir is missing from intro data.
+            if (t.type == "executable" && t.installed) {
+              return [buildTask, createRunTask(t, targetName)];
+            }
+            return buildTask;
+          })
+        )
+      ).flat(1),
+      ...tests.map((t) => createTestTask(t, buildDir, false)),
+      ...benchmarks.map((b) => createTestTask(b, buildDir, true))
     );
     return tasks;
   } catch (e) {
@@ -172,18 +184,15 @@ export async function getMesonTasks(buildDir: string): Promise<vscode.Task[]> {
 export async function getTask(mode: string, name?: string) {
   const tasks = await vscode.tasks.fetchTasks({ type: "meson" });
   const filtered = tasks.filter(
-    t => t.definition.mode === mode && (!name || t.definition.target === name)
+    (t) => t.definition.mode === mode && (!name || t.definition.target === name)
   );
-  if (filtered.length === 0)
-    throw new Error(`Cannot find ${mode} target ${name}.`);
+  if (filtered.length === 0) throw new Error(`Cannot find ${mode} target ${name}.`);
   return filtered[0];
 }
 
 export async function getTasks(mode: string) {
   const tasks = await vscode.tasks.fetchTasks({ type: "meson" });
-  return tasks.filter(
-    t => t.definition.mode === mode
-  );
+  return tasks.filter((t) => t.definition.mode === mode);
 }
 
 export async function runTask(task: vscode.Task) {
