@@ -42,6 +42,7 @@ export async function activate(ctx: vscode.ExtensionContext) {
   if (mesonFiles.length === 0) {
     return;
   }
+  mesonFiles.sort((a, b) => a.fsPath.length - b.fsPath.length);
 
   let configurationChosen = false;
   let savedMesonFile = workspaceState.get<string>("mesonbuild.mesonFile");
